@@ -39,10 +39,10 @@ main:
 ; Intersection 2
 ;------------------------------------------------------------
 
-          sbi       DDRB, DDB3                    ; Setting Green LED pin to output (B11)
+          sbi       DDRB, DDB3                    ; Setting Yellow LED pin to output (B11)
           cbi       PORTB, PB3                    ; Turn LED off (B11)
 
-          sbi       DDRB, DDB4                    ; Setting Yellow LED pin to output (B12)
+          sbi       DDRB, DDB4                    ; Setting Green LED pin to output (B12)
           cbi       PORTB, PB4                    ; Turn LED off (B12)
           
           sbi       DDRB, DDB5                    ; Setting Red LED pin to output (B13)
