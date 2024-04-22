@@ -1,10 +1,10 @@
 ;
-; StoplyV4.asm
+; main.asm
 ;
 ; Created: 4/21/2024 3:05:20 AM
 ; Author : Jordan, Daniel, Zander
 ;
-         
+
 .equ TmDelay = 65536 - (1000000 / 16)
 .equ DELAY_S = 64                      ; sleep 1 second
 
@@ -199,6 +199,9 @@ iAtoB:
 
           call      delay_ms                      ; Wait 1 second
           call      delay_ms                      ; Wait 1 second
+          call      delay_ms                      ; Wait 1 second
+          call      delay_ms                      ; Wait 1 second
+          call      delay_ms                      ; Wait 1 second
 
           rjmp tm1ISRret
 
@@ -235,9 +238,8 @@ leftPedISR:
           reti
 
 timer1ISR:
-         reti
-          
-          
+          reti
+
 ped_btn_pressed:
           ldi       PedCnt, DELAY
           sbis      PINB, IntersectionAGreenLed
@@ -256,11 +258,11 @@ delay_loop_A:
           cbi       PORTC, BottomLeftBar
           cbi       PORTC, BottomBar
           sbi       PORTC, BottomRightBar
- 
+
           cbi       PORTD, PedestrianLightB
           call      delay_ms
 
-         ; Display 8
+          ; Display 8
           sbi       PORTC, BottomBar
           sbi       PORTC, BottomLeftBar
 
@@ -353,7 +355,7 @@ delay_loop_B:
           cbi       PORTD, PedestrianLightA
           call      delay_ms
 
-         ; Display 8
+          ; Display 8
           sbi       PORTC, BottomBar
           sbi       PORTC, BottomLeftBar
 
@@ -425,9 +427,9 @@ delay_loop_B:
           sbi       PORTC, BottomBar
           sbi       PORTC, BottomLeftBar  
           sbi       PORTC, TopBar
-          
+
           call      delay_ms
-         
+
 exit_loop:
           call     displayClear      
           ret
