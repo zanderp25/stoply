@@ -82,9 +82,6 @@ main_loop:
 
           call      switchLights
 
-
-
-
 end_main: 
           rjmp      main_loop
 
@@ -221,6 +218,9 @@ iBtoA:
 
           call      delay_ms                      ; Wait 1 second
           call      delay_ms                      ; Wait 1 second
+          call      delay_ms                      ; Wait 1 second
+          call      delay_ms                      ; Wait 1 second
+          call      delay_ms                      ; Wait 1 second
 
 tm1ISRret:
           ldi       r20, HIGH(TmDelay)          ; Reset timer counter
@@ -247,8 +247,7 @@ ped_btn_pressed:
 delay_loop_A:
           sbi       PORTD, PedestrianLightB
           call      delay_ms
-          cbi       PORTD, PedestrianLightB
-          call      delay_ms
+
           ; Display 9
           sbi       PORTD, TopLeftBar
           sbi       PORTC, TopBar
@@ -257,27 +256,23 @@ delay_loop_A:
           cbi       PORTC, BottomLeftBar
           cbi       PORTC, BottomBar
           sbi       PORTC, BottomRightBar
-          
-          sbi       PORTD, PedestrianLightB
-          call      delay_ms
+ 
           cbi       PORTD, PedestrianLightB
           call      delay_ms
+
          ; Display 8
           sbi       PORTC, BottomBar
           sbi       PORTC, BottomLeftBar
 
           sbi       PORTD, PedestrianLightB
           call      delay_ms
-          cbi       PORTD, PedestrianLightB
-          call      delay_ms
+
         ;  Display 7
           cbi       PORTC, BottomBar
           cbi       PORTC, BottomLeftBar
           cbi       PORTD, TopLeftBar
           cbi       PORTD, MiddleBar
 
-          sbi       PORTD, PedestrianLightB
-          call      delay_ms
           cbi       PORTD, PedestrianLightB
           call      delay_ms
 
@@ -291,16 +286,11 @@ delay_loop_A:
 
           sbi       PORTD, PedestrianLightB
           call      delay_ms
-          cbi       PORTD, PedestrianLightB
-          call      delay_ms
 
           ; Display 5
           sbi       PORTC, TopBar
           cbi       PORTC, BottomLeftBar
           
-
-          sbi       PORTD, PedestrianLightB
-          call      delay_ms
           cbi       PORTD, PedestrianLightB
           call      delay_ms
 
@@ -311,25 +301,20 @@ delay_loop_A:
 
           sbi       PORTD, PedestrianLightB
           call      delay_ms
-          cbi       PORTD, PedestrianLightB
-          call      delay_ms
 
           ; Display 3
           cbi       PORTD, TopLeftBar
           sbi       PORTC, TopBar
           sbi       PORTC, BottomBar
 
-          sbi       PORTD, PedestrianLightB
-          call      delay_ms
           cbi       PORTD, PedestrianLightB
           call      delay_ms
 
           ; Display 2
           cbi       PORTC, BottomRightBar
           sbi       PORTC, BottomLeftBar
+
           sbi       PORTD, PedestrianLightB
-          call      delay_ms
-          cbi       PORTD, PedestrianLightB
           call      delay_ms
 
           ; Display 1
@@ -339,8 +324,6 @@ delay_loop_A:
           cbi       PORTC, BottomBar
           sbi       PORTC, BottomRightBar
           
-          sbi       PORTD, PedestrianLightB
-          call      delay_ms
           cbi       PORTD, PedestrianLightB
           call      delay_ms
 
@@ -357,8 +340,6 @@ delay_loop_A:
 delay_loop_B:
           sbi       PORTD, PedestrianLightA
           call      delay_ms
-          cbi       PORTD, PedestrianLightA
-          call      delay_ms
 
           ; Display 9
           sbi       PORTD, TopLeftBar
@@ -369,8 +350,6 @@ delay_loop_B:
           cbi       PORTC, BottomBar
           sbi       PORTC, BottomRightBar
           
-          sbi       PORTD, PedestrianLightA
-          call      delay_ms
           cbi       PORTD, PedestrianLightA
           call      delay_ms
 
@@ -380,8 +359,6 @@ delay_loop_B:
 
           sbi       PORTD, PedestrianLightA
           call      delay_ms
-          cbi       PORTD, PedestrianLightA
-          call      delay_ms
 
         ;  Display 7
           cbi       PORTC, BottomBar
@@ -389,8 +366,6 @@ delay_loop_B:
           cbi       PORTD, TopLeftBar
           cbi       PORTD, MiddleBar
 
-          sbi       PORTD, PedestrianLightA
-          call      delay_ms
           cbi       PORTD, PedestrianLightA
           call      delay_ms
 
@@ -404,16 +379,11 @@ delay_loop_B:
 
           sbi       PORTD, PedestrianLightA
           call      delay_ms
-          cbi       PORTD, PedestrianLightA
-          call      delay_ms
 
           ; Display 5
           sbi       PORTC, TopBar
           cbi       PORTC, BottomLeftBar
           
-
-          sbi       PORTD, PedestrianLightA
-          call      delay_ms
           cbi       PORTD, PedestrianLightA
           call      delay_ms
 
@@ -424,16 +394,12 @@ delay_loop_B:
 
           sbi       PORTD, PedestrianLightA
           call      delay_ms
-          cbi       PORTD, PedestrianLightA
-          call      delay_ms
 
           ; Display 3
           cbi       PORTD, TopLeftBar
           sbi       PORTC, TopBar
           sbi       PORTC, BottomBar
 
-          sbi       PORTD, PedestrianLightA
-          call      delay_ms
           cbi       PORTD, PedestrianLightA
           call      delay_ms
 
@@ -443,8 +409,6 @@ delay_loop_B:
 
           sbi       PORTD, PedestrianLightA
           call      delay_ms
-          cbi       PORTD, PedestrianLightA
-          call      delay_ms
 
           ; Display 1
           cbi       PORTC, TopBar
@@ -453,8 +417,6 @@ delay_loop_B:
           cbi       PORTC, BottomBar
           sbi       PORTC, BottomRightBar
           
-          sbi       PORTD, PedestrianLightA
-          call      delay_ms
           cbi       PORTD, PedestrianLightA
           call      delay_ms
 
@@ -465,12 +427,7 @@ delay_loop_B:
           sbi       PORTC, TopBar
           
           call      delay_ms
-          rjmp      exit_loop
-
-          call      delay_ms
-          rjmp      exit_loop
          
-
 exit_loop:
           call     displayClear      
           ret
