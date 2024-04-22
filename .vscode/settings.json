@@ -1,0 +1,6 @@
+{
+    "[avr]": {
+        "editor.tabSize": 10,
+        "editor.insertSpaces": true
+    }
+}

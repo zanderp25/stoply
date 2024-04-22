@@ -1,155 +1,508 @@
 ;
-; File Name  : Stoply.asm
+; StoplyV4.asm
 ;
-; Author     : Jordan <3, Zander <3, Daniel
-; Description: Traffic signal using LEDs, timers, ...
-; ------------------------------------------------------------
-
-.equ DELAY_CNT = 65536 - (1000000 / 16)         ; clk/256
-
+; Created: 4/21/2024 3:05:20 AM
+; Author : Jordan, Daniel, Zander
+;
+         
+.equ TmDelay = 65536 - (1000000 / 16)
 .equ DELAY_S = 64                      ; sleep 1 second
 
-; Vecotr Table
-; ------------------------------------------------------------
+.equ DELAY = 9
 
-.org 0x0000
+; Intersection A = Intersection 1/3
+.equ IntersectionAGreenLed = PB2
+.equ IntersectionAYellowLed = PB1
+.equ IntersectionARedLed = PB0
+
+; Intersection B = Intersection 2/4
+.equ IntersectionBGreenLed = PB4
+.equ IntersectionBYellowLed = PB3
+.equ IntersectionBRedLed = PB5
+
+; Pedestrian Lights
+.equ PedestrianLightB = PD7
+.equ PedestrianLightA = PD6
+
+; Pedestrian buttons
+.equ PedestrianButton = PD3
+
+.def PedCnt = R21
+
+; Pedestrian Timer Display
+;         - 
+;        | |
+;         _
+;        | |
+;         _
+; Enum for single digit display bars
+.equ TopLeftBar = PD2
+.equ TopBar = PC1
+.equ TopRightBar = PC2
+.equ MiddleBar = PD5
+.equ BottomLeftBar = PC0
+.equ BottomBar = PC3
+.equ BottomRightBar = PC4
+
+; Emergency Button
+.equ Emergencybutton = PD4
+
+; Vector Table
+; ------------------------------------------------------------
+.org 0x0000        
           jmp       main
 
-.org OVF1addr                                     ; Timer/Counter1 Overflow
-          jmp       tm1_ISR   
+.org INT0addr                                     ; External Interrupt 0 (Left Ped Button)
+          jmp       leftPedISR
 
-.org INT_VECTORS_SIZE                             ; end vector table
+
+.org OVF1addr                                     ; Timer/Counter1 Overflow
+          jmp       timer1ISR   
+
+.org INT_VECTORS_SIZE                   ; end Vector Table
+
+; End Vector Table
+; ------------------------------------------------------------
+
+; Main
 ; ------------------------------------------------------------
 main:
-; main application method
-;         one-time setup & configuration
+          call      gpioInit            ; initialize LEDs and button
+          
+          call      timer1Init          ; setup the countdown timer
+
+          sei                           ; enable global interrupts
+
+main_loop:
+          sbis      PIND, PedestrianButton
+          call      ped_btn_pressed
+
+          sbic      PIND, EmergencyButton
+          call      emerg_btn_pressed
+
+          call      switchLights
+
+
+
+
+end_main: 
+          rjmp      main_loop
+
+; End Main
 ; ------------------------------------------------------------
-       
-; Intersection 1
-;------------------------------------------------------------
-          sbi       DDRB, DDB0                    ; Setting Red LED pin to output (B8)
-          cbi       PORTB, PB0                    ; Turn LED off (B8)
-          
-          sbi       DDRB, DDB1                    ; Setting Yellow LED pin to output (B9)
-          cbi       PORTB, PB1                    ; Turn LED off (B9)
-          
-          sbi       DDRB, DDB2                    ; Setting Green LED pin to output (B10)
-          cbi       PORTB, PB2                    ; Turn LED off (B10)
 
-; Intersection 2
-;------------------------------------------------------------
-
-          sbi       DDRB, DDB3                    ; Setting Yellow LED pin to output (B11)
-          cbi       PORTB, PB3                    ; Turn LED off (B11)
-
-          sbi       DDRB, DDB4                    ; Setting Green LED pin to output (B12)
-          cbi       PORTB, PB4                    ; Turn LED off (B12)
-          
-          sbi       DDRB, DDB5                    ; Setting Red LED pin to output (B13)
-          cbi       PORTB, PB5                    ; Turn LED off (B13)
-          
-
-; Set up:
-;------------------------------------------------------------
-
-          cbi       DDRD, DDD2                    ; Set Left Pedestrian Button pin to input (D2)
-          sbi       PORTD, PD2                    ; Enable pull-up circuit
-
-          sbi       EIMSK, INT0                   ; Enable external interrupt 0 for D2
-          ldi       r20, 0b00000010               ; Falling-edge sense bits
-          sts       EICRA, r20                    ; Store to EICRA (external interrupt control register A)
-
-          call      tm1_init                      ; Initialize timer 1
-
-          sei                                     ; Enable global interrupts
-          
-
-main_loop:                                        ; loop continuously  
+; gpioInit
 ; ------------------------------------------------------------
+gpioInit:
+; Intersection A
+          sbi       DDRB, IntersectionAGreenLed
+          cbi       PORTB, IntersectionAGreenLed
+
+          sbi       DDRB, IntersectionAYellowLed
+          cbi       PORTB, IntersectionAYellowLed
+
+          sbi       DDRB, IntersectionARedLed
+          sbi       PORTB, IntersectionARedLed
+
+; Intersection B
+          sbi       DDRB, IntersectionBGreenLed
+          sbi       PORTB, IntersectionBGreenLed
+
+          sbi       DDRB, IntersectionBYellowLed
+          cbi       PORTB, IntersectionBYellowLed
+
+          sbi       DDRB, IntersectionBRedLed
+          cbi       PORTB, IntersectionBRedLed
+
+; Pedestrian Lights
+          sbi       DDRD, PedestrianLightA
+          cbi       PORTD, PedestrianLightA
+  
+          sbi       DDRB, PedestrianLightB
+          cbi       PORTB, PedestrianLightB
           
-
-
-end_main:
-          rjmp      main_loop           ; stay in main loop
-
-
-; Timer Stuff
-;-------------------------------------------------------------
-
-tm1_init:
-; ------------------------------------------------------------
-          ldi       r20, HIGH(DELAY_CNT)          ; High byte of delay_cnt
-          sts       TCNT1H, r20                   ; Store r20 to TCNT1H
-
-          ldi       r20, LOW(DELAY_CNT)           ; Low byte of delay_cnt
-          sts       TCNT1L, r20                   ; Store r20 to TCNT1L 
-
-          clr       r20                           ; Normal Mode
-          sts       TCCR1A, r20                   
-
-          ldi       r20, (1<<CS12)                ; Normal Mode and C1k/256
-          sts       TCCR1B, r20
-
-          ldi       r20, (1<<TOIE1)               ; Enabling time roverflow interrupt
-          sts       TIMSK1, r20                   
-
-          ret                                     ; return tm1_init
-
-tm1_ISR:
-; ------------------------------------------------------------
-          sbis      PINB, PINB2                   ; IF LED is not on
-          rjmp      tm1_ISR_ON                    ; turn LED on
-          rjmp      tm1_ISR_OFF                   ; Else turn LED off
-
-
+; Pedestrian Buttons
+          cbi       DDRD, PedestrianButton
+          sbi       PORTD, PedestrianButton          ; engage pull-up
           
-tm1_ISR_ON:
-          cbi       PORTB, PB4                    ; Turn green light off
-          sbi       PORTB, PB3                    ; Turn yellow light on
+          sbi       EIMSK,INT0                ; enable external interrupt 0 for Blue LED Btn
+          ldi       r20,0b00000010            ; set falling edge sense bits for ext int 0
+          sts       EICRA,r20
+
+; Emergency Buttons
+          cbi       DDRD, EmergencyButton           ; set Green LED Btn to input (D4)
+          cbi       PORTD, EmergencyButton           ; set high-impedance
+          ldi       r20,(1<<PCINT20)    ; enable pin-change on PD4
+          sts       PCMSK2,r20
+          ldi       r20,(1<<PCIE2)      ; enable pin-change interrupt for Port D
+          sts       PCICR,r20
+
+          ret
+
+; Pedestrian Timer Display
+          sbi       DDRC, BottomLeftBar
+          cbi       PORTC, IntersectionAGreenLed
+
+          sbi       DDRC, BottomBar
+          cbi       PORTC, BottomBar
+
+          sbi       DDRC, BottomRightBar
+          sbi       PORTC, BottomRightBar
+
+          sbi       DDRD, MiddleBar
+          cbi       PORTD, MiddleBar
+
+          sbi       DDRC, TopBar
+          cbi       PORTC, TopBar
+
+          sbi       DDRD, TopLeftBar
+          sbi       PORTD, TopLeftBar
+
+          sbi       DDRC, TopRightBar
+          cbi       PORTC, TopRightBar
+
+; IR Scanner
+
+timer1Init:
+
+          ldi       r20,HIGH(TmDelay)
+          sts       TCNT1H,r20
+          ldi       r20,LOW(TmDelay)
+          sts       TCNT1L,r20
+
+          clr       r20                 ; normal mode
+          sts       TCCR1A,r20
+
+          ldi       r20,(1<<CS12)       ; normal mode, clk/256
+          sts       TCCR1B,r20          ; clock is started
+
+          ldi       r20,(1<<TOIE1)      ; enable timer overflow interrupt
+          sts       TIMSK1,r20
+
+          ret                           ; timer1Init
+
+switchLights:
+          sbic      PINB, IntersectionAGreenLed
+          rjmp      iAtoB
+          rjmp      iBtoA
+
+iAtoB:
+          cbi       PORTB, IntersectionAGreenLed
+          sbi       PORTB, IntersectionAYellowLed
 
           call      delay_ms                      ; Wait 1 second
 
-          cbi       PORTB, PB3                    ; Turn yellow light off
-          sbi       PORTB, PB5                    ; Turn red light on
+          cbi       PORTB, IntersectionAYellowLed
+          sbi       PORTB, IntersectionARedLed
 
           call      delay_ms                      ; Wait 1 second
 
-          cbi       PORTB, PB0                    ; Turn red light off
-          sbi       PORTB, PB2                    ; Turn green light on
-
-          call      delay_ms                      ; Wait 1 second
-          call      delay_ms                      ; Wait 1 second
-
-          rjmp      tm1_ISR_ret
-
-tm1_ISR_OFF:
-          cbi       PORTB, PB2                    ; Turn green light off
-          sbi       PORTB, PB1                    ; Turn yellow light on
-
-          call      delay_ms                      ; Wait 1 second
-
-          cbi       PORTB, PB1                    ; Turn yellow light off
-          sbi       PORTB, PB0                    ; Turn red light on
-
-          call      delay_ms                      ; Wait 1 second
-
-          cbi       PORTB, PB5                    ; Turn red light off
-          sbi       PORTB, PB4                    ; Turn green light on
+          cbi       PORTB, IntersectionBRedLed
+          sbi       PORTB, IntersectionBGreenLed
 
           call      delay_ms                      ; Wait 1 second
           call      delay_ms                      ; Wait 1 second
 
-          rjmp      tm1_ISR_ret
+          rjmp tm1ISRret
 
+iBtoA:
+          cbi       PORTB, IntersectionBGreenLed
+          sbi       PORTB, IntersectionBYellowLed
 
-tm1_ISR_ret:
-          ldi       r20, HIGH(DELAY_CNT)          ; Reset timer counter
+          call      delay_ms                      ; Wait 1 second
+
+          cbi       PORTB, IntersectionBYellowLed
+          sbi       PORTB, IntersectionBRedLed
+
+          call      delay_ms                      ; Wait 1 second
+
+          cbi       PORTB, IntersectionARedLed
+          sbi       PORTB, IntersectionAGreenLed
+
+          call      delay_ms                      ; Wait 1 second
+          call      delay_ms                      ; Wait 1 second
+
+tm1ISRret:
+          ldi       r20, HIGH(TmDelay)          ; Reset timer counter
           sts       TCNT1H, r20                   
                                                   
-          ldi       r20, LOW(DELAY_CNT)           
-          sts       TCNT1L, r20                   
+          ldi       r20, LOW(TmDelay)           
+          sts       TCNT1L, r20    
 
-          reti                                    ; tm1_ISR
+          reti
+
+leftPedISR:
+          reti
+
+timer1ISR:
+         reti
+          
+          
+ped_btn_pressed:
+          ldi       PedCnt, DELAY
+          sbis      PINB, IntersectionAGreenLed
+          rjmp      delay_loop_B
+          
+
+delay_loop_A:
+          sbi       PORTD, PedestrianLightB
+          call      delay_ms
+          cbi       PORTD, PedestrianLightB
+          call      delay_ms
+          ; Display 9
+          sbi       PORTD, TopLeftBar
+          sbi       PORTC, TopBar
+          sbi       PORTC, TopRightBar
+          sbi       PORTD, MiddleBar
+          cbi       PORTC, BottomLeftBar
+          cbi       PORTC, BottomBar
+          sbi       PORTC, BottomRightBar
+          
+          sbi       PORTD, PedestrianLightB
+          call      delay_ms
+          cbi       PORTD, PedestrianLightB
+          call      delay_ms
+         ; Display 8
+          sbi       PORTC, BottomBar
+          sbi       PORTC, BottomLeftBar
+
+          sbi       PORTD, PedestrianLightB
+          call      delay_ms
+          cbi       PORTD, PedestrianLightB
+          call      delay_ms
+        ;  Display 7
+          cbi       PORTC, BottomBar
+          cbi       PORTC, BottomLeftBar
+          cbi       PORTD, TopLeftBar
+          cbi       PORTD, MiddleBar
+
+          sbi       PORTD, PedestrianLightB
+          call      delay_ms
+          cbi       PORTD, PedestrianLightB
+          call      delay_ms
+
+          ; Display 6
+          cbi       PORTC, TopRightBar
+          sbi       PORTD, TopLeftBar
+          sbi       PORTD, MiddleBar
+          sbi       PORTC, BottomLeftBar
+          sbi       PORTC, BottomBar
+          sbi       PORTC, BottomRightBar
+
+          sbi       PORTD, PedestrianLightB
+          call      delay_ms
+          cbi       PORTD, PedestrianLightB
+          call      delay_ms
+
+          ; Display 5
+          sbi       PORTC, TopBar
+          cbi       PORTC, BottomLeftBar
+          
+
+          sbi       PORTD, PedestrianLightB
+          call      delay_ms
+          cbi       PORTD, PedestrianLightB
+          call      delay_ms
+
+          ;Display 4
+          cbi       PORTC, TopBar
+          cbi       PORTC, BottomBar
+          sbi       PORTC, TopRightBar
+
+          sbi       PORTD, PedestrianLightB
+          call      delay_ms
+          cbi       PORTD, PedestrianLightB
+          call      delay_ms
+
+          ; Display 3
+          cbi       PORTD, TopLeftBar
+          sbi       PORTC, TopBar
+          sbi       PORTC, BottomBar
+
+          sbi       PORTD, PedestrianLightB
+          call      delay_ms
+          cbi       PORTD, PedestrianLightB
+          call      delay_ms
+
+          ; Display 2
+          cbi       PORTC, BottomRightBar
+          sbi       PORTC, BottomLeftBar
+          sbi       PORTD, PedestrianLightB
+          call      delay_ms
+          cbi       PORTD, PedestrianLightB
+          call      delay_ms
+
+          ; Display 1
+          cbi       PORTC, TopBar
+          cbi       PORTD, MiddleBar
+          cbi       PORTC, BottomLeftBar
+          cbi       PORTC, BottomBar
+          sbi       PORTC, BottomRightBar
+          
+          sbi       PORTD, PedestrianLightB
+          call      delay_ms
+          cbi       PORTD, PedestrianLightB
+          call      delay_ms
+
+          ; Display 0
+          sbi       PORTD, TopLeftBar
+          sbi       PORTC, BottomBar
+          sbi       PORTC, BottomLeftBar  
+          sbi       PORTC, TopBar
+          
+          call      delay_ms
+          rjmp      exit_loop
+
+
+delay_loop_B:
+          sbi       PORTD, PedestrianLightA
+          call      delay_ms
+          cbi       PORTD, PedestrianLightA
+          call      delay_ms
+
+          ; Display 9
+          sbi       PORTD, TopLeftBar
+          sbi       PORTC, TopBar
+          sbi       PORTC, TopRightBar
+          sbi       PORTD, MiddleBar
+          cbi       PORTC, BottomLeftBar
+          cbi       PORTC, BottomBar
+          sbi       PORTC, BottomRightBar
+          
+          sbi       PORTD, PedestrianLightA
+          call      delay_ms
+          cbi       PORTD, PedestrianLightA
+          call      delay_ms
+
+         ; Display 8
+          sbi       PORTC, BottomBar
+          sbi       PORTC, BottomLeftBar
+
+          sbi       PORTD, PedestrianLightA
+          call      delay_ms
+          cbi       PORTD, PedestrianLightA
+          call      delay_ms
+
+        ;  Display 7
+          cbi       PORTC, BottomBar
+          cbi       PORTC, BottomLeftBar
+          cbi       PORTD, TopLeftBar
+          cbi       PORTD, MiddleBar
+
+          sbi       PORTD, PedestrianLightA
+          call      delay_ms
+          cbi       PORTD, PedestrianLightA
+          call      delay_ms
+
+          ; Display 6
+          cbi       PORTC, TopRightBar
+          sbi       PORTD, TopLeftBar
+          sbi       PORTD, MiddleBar
+          sbi       PORTC, BottomLeftBar
+          sbi       PORTC, BottomBar
+          sbi       PORTC, BottomRightBar
+
+          sbi       PORTD, PedestrianLightA
+          call      delay_ms
+          cbi       PORTD, PedestrianLightA
+          call      delay_ms
+
+          ; Display 5
+          sbi       PORTC, TopBar
+          cbi       PORTC, BottomLeftBar
+          
+
+          sbi       PORTD, PedestrianLightA
+          call      delay_ms
+          cbi       PORTD, PedestrianLightA
+          call      delay_ms
+
+          ;Display 4
+          cbi       PORTC, TopBar
+          cbi       PORTC, BottomBar
+          sbi       PORTC, TopRightBar
+
+          sbi       PORTD, PedestrianLightA
+          call      delay_ms
+          cbi       PORTD, PedestrianLightA
+          call      delay_ms
+
+          ; Display 3
+          cbi       PORTD, TopLeftBar
+          sbi       PORTC, TopBar
+          sbi       PORTC, BottomBar
+
+          sbi       PORTD, PedestrianLightA
+          call      delay_ms
+          cbi       PORTD, PedestrianLightA
+          call      delay_ms
+
+          ; Display 2
+          cbi       PORTC, BottomRightBar
+          sbi       PORTC, BottomLeftBar
+
+          sbi       PORTD, PedestrianLightA
+          call      delay_ms
+          cbi       PORTD, PedestrianLightA
+          call      delay_ms
+
+          ; Display 1
+          cbi       PORTC, TopBar
+          cbi       PORTD, MiddleBar
+          cbi       PORTC, BottomLeftBar
+          cbi       PORTC, BottomBar
+          sbi       PORTC, BottomRightBar
+          
+          sbi       PORTD, PedestrianLightA
+          call      delay_ms
+          cbi       PORTD, PedestrianLightA
+          call      delay_ms
+
+          ; Display 0
+          sbi       PORTD, TopLeftBar
+          sbi       PORTC, BottomBar
+          sbi       PORTC, BottomLeftBar  
+          sbi       PORTC, TopBar
+          
+          call      delay_ms
+          rjmp      exit_loop
+
+          call      delay_ms
+          rjmp      exit_loop
+         
+
+exit_loop:
+          call     displayClear      
+          ret
+
+displayClear:
+          cbi       PORTD, TopLeftBar
+          cbi       PORTC, TopBar
+          cbi       PORTC, TopRightBar
+          cbi       PORTD, MiddleBar
+          cbi       PORTC, BottomLeftBar
+          cbi       PORTC, BottomBar
+          cbi       PORTC, BottomRightBar
+          ret
+
+emerg_btn_pressed:
+          cbi       PORTB, IntersectionAGreenLed
+          cbi       PORTB, IntersectionAYellowLed
+          cbi       PORTB, IntersectionBGreenLed
+          cbi       PORTB, IntersectionBYellowLed
+          sbi       PORTB, IntersectionARedLed
+          sbi       PORTB, IntersectionBRedLed
+
+loop_forever:
+          cbi       PORTB, IntersectionBRedLed
+          cbi       PORTB, IntersectionARedLed
+          call      delay_ms
+          sbi       PORTB, IntersectionARedLed
+          sbi       PORTB, IntersectionBRedLed
+          call      delay_ms
+          sbis      PIND, EmergencyButton
+          rjmp      loop_forever
+          reti
 
 ; ------------------------------------------------------------
 delay_ms:
